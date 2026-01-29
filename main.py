@@ -1,5 +1,6 @@
 import sys
 import time
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -20,6 +21,16 @@ class ArtificialNeuralNetwork:
         self.delta: np.ndarray = []
 
         self.data_size: tuple = np.shape(x_train)
+
+        # Optimizer Params
+        self.beta_1 = 0.9
+        self.beta_2 = 0.999
+        self.e = 10**-8
+        self.lr = 0
+        self.mw = {}
+        self.mb = {}
+        self.vw = {}
+        self.vb = {}
 
     def relu(self, x: np.ndarray):
         return np.maximum(0, x)
@@ -75,10 +86,49 @@ class ArtificialNeuralNetwork:
                 continue
             self.delta = dx * self.relu_derivative(self.preactivations[i - 1])
 
-    def update_params(self, lr: float):
+    def update_param_with_adam(self, t: int):
         for i in range(len(self.weights)):
-            self.weights[i + 1] -= lr * self.gradient_weights[i + 1]
-            self.biases[i + 1] -= lr * self.gradient_biases[i + 1]
+            idx = i + 1
+
+            # Init moment jika belum ada
+            if idx not in self.mw:
+                self.mw[idx] = np.zeros_like(self.weights[idx])
+                self.vw[idx] = np.zeros_like(self.weights[idx])
+                self.mb[idx] = np.zeros_like(self.biases[idx])
+                self.vb[idx] = np.zeros_like(self.biases[idx])
+
+            # ===== WEIGHTS =====
+            self.mw[idx] = (
+                self.beta_1 * self.mw[idx]
+                + (1 - self.beta_1) * self.gradient_weights[idx]
+            )
+            self.vw[idx] = self.beta_2 * self.vw[idx] + (1 - self.beta_2) * np.square(
+                self.gradient_weights[idx]
+            )
+
+            mw_hat = self.mw[idx] / (1 - self.beta_1**t)
+            vw_hat = self.vw[idx] / (1 - self.beta_2**t)
+
+            self.weights[idx] -= self.lr * mw_hat / (np.sqrt(vw_hat) + self.e)
+
+            # ===== BIASES =====
+            self.mb[idx] = (
+                self.beta_1 * self.mb[idx]
+                + (1 - self.beta_1) * self.gradient_biases[idx]
+            )
+            self.vb[idx] = self.beta_2 * self.vb[idx] + (1 - self.beta_2) * np.square(
+                self.gradient_biases[idx]
+            )
+
+            mb_hat = self.mb[idx] / (1 - self.beta_1**t)
+            vb_hat = self.vb[idx] / (1 - self.beta_2**t)
+
+            self.biases[idx] -= self.lr * mb_hat / (np.sqrt(vb_hat) + self.e)
+
+    def update_params(self):
+        for i in range(len(self.weights)):
+            self.weights[i + 1] -= self.lr * self.gradient_weights[i + 1]
+            self.biases[i + 1] -= self.lr * self.gradient_biases[i + 1]
 
     def _train_visualization(self, loss: float, acc, epochs: int, i: int):
         # start timer on first epoch
@@ -103,22 +153,30 @@ class ArtificialNeuralNetwork:
         if i == epochs - 1:
             print()
 
-    def train(self, epochs: int, lr: float):
+    def train(self, epochs: int, lr: float, optimizer: Literal["adam", "sgd"]):
+        self.lr = lr
         if len(self.weights) <= 0:
             raise RuntimeError("Initial weight first (dense)")
-
+        list_loss = []
         for i in range(epochs):
             self.forward(self.x_train)
             # loss & accuracy
             y_pred = self.activations[len(self.activations) - 1].ravel()
             loss = self.binary_cross_entropy(self.y_train.ravel(), y_pred)
+            list_loss.append(loss)
             acc = np.mean((y_pred >= 0.5) == self.y_train.ravel())
 
             self._train_visualization(loss, acc, epochs, i)
 
             self.backward()
-            self.update_params(lr)
+
+            if optimizer == "adam":
+                self.update_param_with_adam(i + 1)
+            else:
+                self.update_params()
             time.sleep(0.001)
+
+        print(list_loss)
 
     def prediction(self, x: np.ndarray):
         self.forward(x)
@@ -137,9 +195,4 @@ model = ArtificialNeuralNetwork(np.array(x_train), np.array(y_train))
 model.dense(8)
 model.dense(4)
 model.dense(1)
-model.train(1000, 0.01)
-
-y_pred = model.prediction(x_test)
-print(f"Y prediction: \n{y_pred}")
-print("==")
-print(f"Y actual: \n{y_test}")
+model.train(100, 0.01, "adam")
