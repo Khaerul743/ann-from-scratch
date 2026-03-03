@@ -60,9 +60,7 @@ Tujuan utamanya adalah membuat mekanisme pembelajaran model dapat terlihat dan d
 
 ## Gambaran Arsitektur
 
-```id="arsitektur-ann"
 ![Screenshot App](./images/ann-architecture.png)
-```
 
 Model mengikuti alur komputasi sederhana di mana proses forward menghasilkan prediksi, sedangkan proses backward menyebarkan error untuk memperbarui parameter model.
 
