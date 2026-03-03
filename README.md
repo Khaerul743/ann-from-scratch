@@ -61,6 +61,7 @@ Tujuan utamanya adalah membuat mekanisme pembelajaran model dapat terlihat dan d
 ## Gambaran Arsitektur
 
 ![Screenshot App](./images/ann-architecture.png)
+_Sumber: [GeeksforGeeks - Artificial Neural Networks](https://www.geeksforgeeks.org/deep-learning/artificial-neural-networks-and-its-applications/)_
 
 Model mengikuti alur komputasi sederhana di mana proses forward menghasilkan prediksi, sedangkan proses backward menyebarkan error untuk memperbarui parameter model.
 
